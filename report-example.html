@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>KOLOLA Report</title>
+
+    <style type="text/css">
+        html, body {
+            font-family: 'Open Sans', sans-serif;
+            background: #fff;
+            color: #000;
+        }
+
+        #master {
+            display: none;
+        }
+
+        #output {
+            display: table;
+        }
+
+        .row {
+            display: table-row;
+
+        }
+
+        .row.header {
+            font-weight: bold;
+        }
+
+        .row > span {
+            display: table-cell;
+            margin: 0;
+            padding: 5px;
+            border-bottom: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+
+    <script src="bundle.js"></script>
+
+    <!--
+
+    bundle.js contains a browserified module; that exports the following globals:
+
+    $  - jquery
+    ix - the KOLOLA Interchange Client class (at ix.IntxClient) and type URI constants (at ix.TYPE.*)
+    KololaReport - A class-y function for generating reports, as demonstrated below
+
+    -->
+
+    <script>
+
+    $().ready(function(){
+        // Define query
+        var query = "all";
+
+        // API Key
+        var key = "394c8f3-9f34d8-34e39e5";
+
+        // This is the master element, it's copied for each row in the report
+        var $master = $('#master');
+
+        /**
+         *  Define how elements within the master element map to data from the interchange API
+         *  'jquery_path': 'json-path'
+         *  jquery path is within the master element
+         *  json-path is the jsonpath within the record object
+         **/
+        var cols = {
+
+            // This returns the contents of the field 'name'
+            '.title': '$.data.name',
+
+            // This finds related evidence records, filters them to the DOI evidence type, and returns the 'value' of the evidence (the DOI itself)
+            '.doi': '$.references[\'' + ix.TYPE.eventevidence + '\'][?(@.data.evidenceid.uri=="http://atreview.impactrecord.co.uk/_records/01/_intxv1/evidence/EvidenceID/1")].data.value',
+
+            // Bibtex ID, evidence 2
+            '.bibtex': '$.references[\'' + ix.TYPE.eventevidence + '\'][?(@.data.evidenceid.uri=="http://atreview.impactrecord.co.uk/_records/01/_intxv1/evidence/EvidenceID/2")].data.value',
+
+        };
+
+        // This is the element that each row will be appended to
+        var $output = $('#output');
+
+        var url = "https://atreview.impactrecord.co.uk/api/intx/?search&q=" + query + "&token=" + key;
+
+        var r = new KololaReport({
+            url: url,
+            cols: cols,
+            $master: $master,
+            $output: $output
+        });
+
+        // r.complete  returns a Promise object so actions can be taken when rendering completes
+        r.complete().then(function(){
+            // do something
+        });
+    })
+
+    </script>
+
+    <!--
+        This is a simple example; you could render rows as something more complex, though, and then
+        e.g. set up sorting, searching ...
+    -->
+    <div id="master" class="row">
+        <span class="title"></span>
+        <span class="doi"></span>
+        <span class="bibtex"></span>
+    </div>
+
+    <div id="output">
+        <div class="row header">
+            <span>Title</span>
+            <span>DOI</span>
+            <span>Bibtex ID</span>
+        </div>
+    </div>
+
+</body>
+</html>

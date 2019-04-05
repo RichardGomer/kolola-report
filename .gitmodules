@@ -1,0 +1,3 @@
+[submodule "kolola-intx"]
+	path = kolola-intx
+	url = https://github.com/richardgomer/kolola-intx.git
