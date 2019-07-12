@@ -21,13 +21,29 @@ function KololaReport(opts)
     });
 
     // Then unpack options
-    $master = opts.$master;
-    url = opts.url;
-    $output = opts.$output;
-    cols = opts.cols;
-    type = opts.type;
+    var $master = opts.$master;
+    var url = opts.url;
+    var $output = opts.$output;
+    var cols = opts.cols;
+    var type = opts.type;
 
     var kc = new ix.IntxClient();
+
+    // A helper function to backtrack on a JSONpath and see where it stops working
+    function jpdebug(path, record) {
+        var parsed = jp.parse(path);
+
+        do {
+            var sp = jp.stringify(parsed);
+            match = jp.query(record, sp);
+            if(Array.isArray(match) && match.length > 0) {
+                return sp;
+            }
+            parsed.pop();
+        } while(parsed.length > 0);
+
+        return false;
+    }
 
     /**
      * Render a single record
@@ -54,6 +70,8 @@ function KololaReport(opts)
                 return "[POINTER: " + item.uri + "]";
         }
 
+        // JSONpath doesn't like fields with @ in them... work around it
+        record['_id'] = record['@id'];
 
         // For each defined element->field, find the value and update the template
         for(var jqp in cols) {
@@ -61,6 +79,13 @@ function KololaReport(opts)
             var srcpath = cols[jqp];
 
             var value = val(jp.query(record, srcpath));
+
+            console.log(srcpath, value);
+
+            if(typeof value == 'undefined') {
+                console.error("JSON path does not resolve", srcpath, record, "matches until", jpdebug(srcpath, record));
+            }
+
             dest.text(value);
         }
 

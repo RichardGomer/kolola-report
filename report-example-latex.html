@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>KOLOLA Report</title>
+
+    <style type="text/css">
+        html, body {
+            font-family: 'Open Sans', sans-serif;
+            background: #fff;
+            color: #000;
+        }
+
+        #master {
+            display: none;
+        }
+
+        #output {
+            display: table;
+        }
+
+        .row {
+            display: table-row;
+            color: #ccc;
+        }
+
+        .row.header {
+            font-weight: bold;
+        }
+
+        .row > span {
+            display: table-cell;
+            margin: 0;
+            padding: 5px;
+            border-bottom: 1px solid #ccc;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+
+    <script src="bundle.js"></script>
+
+    <p>A slightly more complex example; performs multiple queries and outputs Latex</p>
+
+    <!--
+
+    bundle.js contains a browserified module; that exports the following globals:
+
+    $  - jquery
+    ix - the KOLOLA Interchange Client class (at ix.IntxClient) and type URI constants (at ix.TYPE.*)
+    KololaReport - A class-y function for generating reports, as demonstrated below
+
+    -->
+
+    <script>
+
+    $().ready(function(){
+        // Define query
+        var queries = {
+            // Title : Query
+
+            "Trends/Future Transport System": "(framework:17 AND framework:23)",
+
+            "Acceptability": "(framework:17 AND framework:21)",
+
+            "Interacting with vehicle (means of interaction)": "(framework:17 AND framework:4)",
+
+            "Interacting with transport system": "(framework:17 AND framework:11)",
+
+
+            "Motive: Safety": "(framework:16 AND framework:17)",
+            "Motive: Environment (Pollution, Climate Change)": "(framework:17 AND framework:7 OR framework:17 AND framework:8)",
+
+
+            "Participatory Design": "(framework:17 AND framework:13)",
+            "User Group: Low Income": "(framework:17 AND framework:3)",
+            "User Group: Elderly": "(framework:17 AND framework:1)",
+
+
+
+
+        }
+
+        // API Key
+        var key = "394c8f3-9f34d8-34e39e5";
+
+        // This is the master element, it's copied for each row in the report
+        var $master = $('#master');
+
+        /**
+         *  Define how elements within the master element map to data from the interchange API
+         *  'jquery_path': 'json-path'
+         *  jquery path is within the master element
+         *  json-path is the jsonpath within the record object
+         **/
+        var cols = {
+
+            // This returns the contents of the field 'name'
+            '.title': '$.data.name',
+
+            // This finds related evidence records, filters them to the DOI evidence type, and returns the 'value' of the evidence (the DOI itself)
+            '.doi': '$.references[\'' + ix.TYPE.eventevidence + '\'][?(@.data.evidenceid.uri=="http://atreview.impactrecord.co.uk/_records/01/_intxv1/evidence/EvidenceID/1")].data.value',
+
+            // Bibtex ID, evidence 2
+            '.bibtex': '$.references[\'' + ix.TYPE.eventevidence + '\'][?(@.data.evidenceid.uri=="http://atreview.impactrecord.co.uk/_records/01/_intxv1/evidence/EvidenceID/2")].data.value',
+
+            // Acceptability notes, evidence 3
+            '.notes': '$.references[\'' + ix.TYPE.eventevidence + '\'][?(@.data.evidenceid.uri=="http://atreview.impactrecord.co.uk/_records/01/_intxv1/evidence/EvidenceID/3")].data.value',
+
+        };
+
+        // This is the element that each report will be appended to; we generate sub-elements automatically
+        var $output = $('#output');
+
+
+        // Run each defined query
+        for(title in queries) {
+            var query = queries[title];
+
+
+            (function(query, title){ // Need to trap some variables in a closure
+                var o = $('<div class="report">\
+                <h2>' + title + '</h2>\
+                <div>\\begin{tabular}{| p{4cm} | p{3cm} | p{3cm} |}</div>\
+                <div class="row header">\
+                    <span>Paper</span> &\
+                    <span>Topic</span> &\
+                    <span>Notes</span> \\\\ \
+                    \\hline \
+                </div> \
+                </div>');
+                $output.append(o);
+
+
+                var url = "https://atreview.impactrecord.co.uk/api/intx/?search&q=" + query + "&token=" + key;
+
+                var r = new KololaReport({
+                    url: url,
+                    cols: cols,
+                    $master: $master,
+                    $output: o
+                });
+
+                // r.complete  returns a Promise object so actions can be taken when rendering completes
+                r.complete().then(function(){
+
+                    // Link citations to records for convenient browsing
+                    o.find('.bibtex').each(function(i, el){
+                        $(el).attr('href', 'https://atreview.impactrecord.co.uk/#evidence:2=' + $(el).text());
+                    });
+
+                    // Escape ampersands for safe copying into Latex
+                    o.find('span,a').each(function(i, el){
+                        console.log($(el).text());
+                        $(el).text($(el).text().replace(/&/, '\\&'));
+                    })
+
+                    // Add footer to the report
+                    o.append("<div>\\end{tabular}</div>");
+                });
+
+            })(query, title);
+        }
+
+
+    })
+
+    </script>
+
+    <!--
+        This is a simple example; you could render rows as something more complex, though, and then
+        e.g. set up sorting, searching ...
+    -->
+    <div id="master" class="row">
+        <span class="title"></span> \cite{<a class="bibtex" target="_blank"></a>} &
+        <span class="topic"></span> &
+        <span class="notes"></span> \\ \hline
+    </div>
+
+    <div id="output">
+
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,96 @@
+
+html, body {
+    font-family: 'Open Sans', sans-serif;
+    background: #fff;
+    color: #000;
+    margin: 0;
+    padding: 0;
+}
+
+#master {
+    display: none;
+}
+
+#output {
+    display: flex;
+}
+
+#output > div {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 100%;
+    padding: 15px;
+}
+
+#output > div > h2
+{
+    color: #ccc;
+}
+
+#output > div > h2 > a
+{
+    color: inherit;
+}
+
+.row {
+    display: block;
+    position: relative;
+    margin: 0 0 10px 0;
+    background: #eee;
+    border-bottom: 3px solid #999;
+}
+
+.row.header {
+    font-weight: bold;
+}
+
+.row > a {
+    display: block;
+    margin-top: 10px;
+    font-weight: bold;
+    text-decoration: none;
+    color: #222;
+    padding: 18px 10px 5px 10px;
+}
+
+.row .date, .row .id {
+    display: none;
+}
+
+.row .desc {
+    font-size: 0.7em;
+    padding: 5px 10px 5px 10px;
+}
+
+.row .status {
+    font-size: 0.7em;
+    position: absolute;
+    right: 10px;
+    top:  4px;
+}
+
+.row .due {
+    display: block;
+    font-size: 0.7em;
+    background: #ddd;
+    padding: 5px 10px 5px 10px;
+    color: #222;
+
+}
+
+.row .due::before {
+    content: "Due: ";
+    color: #222;
+}
+
+.row.due-overdue {
+    border-bottom: 3px solid #f00;
+}
+
+.row.due-today {
+    border-bottom: 3px solid #ff0;
+}
+
+.row.due-normal {
+    border-bottom: 3px solid #0f0;
+}

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>TODO List</title>
+
+    <link rel="stylesheet" type="text/css" href="todo.css" />
+</head>
+<body>
+
+    <script src="bundle.js"></script>
+
+    <!--
+
+    bundle.js contains a browserified module; that exports the following globals:
+
+    $  - jquery
+    ix - the KOLOLA Interchange Client class (at ix.IntxClient) and type URI constants (at ix.TYPE.*)
+    KololaReport - A class-y function for generating reports, as demonstrated below
+
+    -->
+
+    <script>
+
+    // Define list of portfolios and queries
+    var lists = [
+        {title: "Personal", domain: 'rcg.impactrecord.co.uk', query: 'evidence:1=In Progress', key: 'API-KEY-GOES-HERE', status_uri: "http://rcg.impactrecord.co.uk/_records/01/_intxv1/evidence/EvidenceID/1", due_uri: "http://rcg.impactrecord.co.uk/_records/01/_intxv1/evidence/EvidenceID/2"},
+    ];
+
+    // OR load them from an external file (to exclude your keys from git!) - see below!
+
+
+    $().ready(function(){
+        $.get('todo-list-spec.json', {}, function(lists){ showLists(lists); }, 'json');
+
+    });
+
+    function showLists(lists) {
+
+        for(var spec of lists) {
+
+            var url = "https://" + spec.domain + "/api/intx/?search&q=" + spec.query + "&token=" + spec.key;
+
+            var renderlist = function(spec){
+
+
+                // This is the master element, it's copied for each row in the report
+                var $master = $('#master');
+
+                /**
+                 *  Define how elements within the master element map to data from the interchange API
+                 *  'jquery_path': 'json-path'
+                 *  jquery path is within the master element
+                 *  json-path is the jsonpath within the record object
+                 **/
+                var cols = {
+
+                    // This returns the contents of the field 'name'
+                    '.title': '$.data.name',
+
+                    // Description
+                    '.desc': '$.data.description',
+
+                    // Event ID (for generating links)
+                    // We actually have to parse it out of the URI which isn't perfect (URIs are not guaranteed to contain it...)
+                    // but is close enough
+                    '.id': '$._id',
+
+                    // Status
+                    '.status': '$.references[\'' + ix.TYPE.eventevidence + '\'][?(@.data.evidenceid.uri=="'+spec.status_uri+'")].data.value',
+
+                    // Due date
+                    '.due': '$.references[\'' + ix.TYPE.eventevidence + '\'][?(@.data.evidenceid.uri=="'+spec.due_uri+'")].data.value',
+
+                    // Date
+                    '.date': '$.data.startdate'
+
+                };
+
+                // This is the element that each row will be appended to
+                var $list = $("<div><h2><a href=\"https://"+spec.domain+"\" target=\"_parent\">" + spec.title + "</h2></a></div>").appendTo('#output');
+                //var $list = $('#output > div');
+                console.log($list);
+
+
+                var r = new KololaReport({
+                    url: url,
+                    cols: cols,
+                    $master: $master,
+                    $output: $list
+                });
+
+                // r.complete  returns a Promise object so actions can be taken when rendering completes
+                r.complete().then(function(){
+
+                    var now = new Date();
+                    now.setHours(0,0,0,0);
+
+                    // Set up individual rows
+                    $list.find('.row').each(function(i, el){
+
+                        // Link title to activity
+                        var id = $(el).find('.id').text().split('/').pop();
+                        $(el).find('.title').attr('href', 'https://' + spec.domain + '/#event:' + id);
+
+                        // Add due date colour coding
+                        var due = $(el).find('.due').text().trim();
+                        if(due.length > 0) {
+
+                            // Some date wrangling
+                            // (d)d/(m)m/yyyy
+                            var matches;
+                            if(matches = due.match(/^([0-9]{1,2})\/([0-9]{1,2})\/([0-9]{4})$/)) {
+                                var d = matches[1].padStart(2, "0");
+                                var m = matches[2].padStart(2, "0");
+                                var y = matches[3];
+                            }
+
+                            var strdue = y + "-" + m + "-" + d;
+
+                            var duedate = new Date(strdue);
+                            duedate.setHours(0,0,0,0);
+                            console.log(due, "=", strdue, "=", duedate);
+                            var age = now - duedate;
+
+                            if(age == 0) { // Due today
+                                $(el).addClass('due-today');
+                            } else if (age > 0) { // Overdue
+                                $(el).addClass('due-overdue');
+                            } else { // OK
+                                $(el).addClass('due-normal');
+                            }
+
+                            $(el).data('due', duedate.getTime())
+
+                        } else {
+                            $(el).data('due', Infinity);
+                            $(el).find('.due').hide();
+                        }
+
+                    });
+
+                    // Sort rows on due date
+                    var rows = $list.find('.row');
+                    rows.sort(function(a, b) {
+                        return $(a).data('due') - $(b).data('due');
+                    });
+
+                    $list.append(rows);
+
+                });
+            } // End renderList()
+
+            renderlist(spec);
+        } // End loop over lists
+
+    }
+
+    </script>
+
+
+    <div id="master" class="row">
+        <a class="title" target="_blank"></a>
+        <p class="desc"></p>
+        <span class="due"></span>
+        <span class="date"></span>
+        <span class="status"></span>
+        <span class="id"></span>
+    </div>
+
+    <div id="output">
+
+    </div>
+
+</body>
+</html>
